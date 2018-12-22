@@ -90,6 +90,22 @@ Alternate way to determine action up front with large table and next two input
 characters. Slower.  
 ~ 1.15B cycles
 
+-- lexer27mx.c --  
+Replace one branch in keyword check with conditional move instruction. This reduces
+the number of branches by around 20M though the number of absolute misses stays the
+same.  
+~ 0.94B cycles, 1.22B instructions, ~9.5% branch misses
+
+-- lexer2qd.c & lexer2dasm.s --  
+Attempting jump table dispatch again with simplest mechanism, just look up location
+in table using current character and jump to handler. Could be viable since total
+number of instructions is very low, have not tried mmap version yet.  
+Very low number of branches too, though relative misses very high. Basically branch
+prediction does not work at all for the table jumps so can expect 50% misses for 
+each processed token.  
+~ 1.15B cycles, 0.85B instructions, 137M branches, >22% branch misses  
+Assembler version is just gcc output cleaned up a bit.  
+~ 1.12B cycles, 0.72B instructions, 120M branches, ~25% branch misses
 
 -- lexer3.c --  
 Implement roughly the same DFA as lexer.c using tables similar to the scanners 
