@@ -104,10 +104,10 @@ Assembler output with cmov patched in:
 
 -- lexer27miu2.c --  
 Tried to improve without relying on assembler, use pre-compute values for keyword 
-* hashmult.  
+times hashmult.  
 ~ 0.915B cycles, 1.2B instructions  
 
--- lexer2qdm.c & lexer2qd_fix.s --  
+-- lexer2qdm.c & lexer2qdm_fix.s --  
 Attempting jump table dispatch again with simplest mechanism, just look up location
 in table using current character and jump to handler. Could be viable since total
 number of instructions is very low. Gcc does some strange stuff though and moves
@@ -146,9 +146,9 @@ Still need to break out in other cases to get start of token for parsing numbers
 and identifiers...  
 All of these lexers have the problem that after each recognized token we have 
 to return to the start state and reparse the last character.
-Also I note that while I managed to improve the number of instructions, the number
+~~Also I note that while I managed to improve the number of instructions, the number
 of cycles actually has not improved at all.  
-~ 1.78B cycles, 1.77B instructions ~9% branch misses
+~ 1.78B cycles, 1.77B instructions ~9% branch misses~~
 Correction:  
 These measurements seem to be wrong somehow, now I get:  
 ~ 1.55B cycles, 1.83B instructions  
