@@ -149,11 +149,44 @@ static int32_t lex(char *src) {
     if(t >= FLTR) { 
 //      rValue = cur * hashmult;
 //      lastChars = cur;
-      while(typeLookup[0][nxt] >= FNUM) { //fast but L1 cache misses...
+
+      //no ident in llinput > length 7 so this does not actually loop...
+      //gcc removes the src++, does use src[offset] and adjusts src at end
+      //turn out faster somehow...
+      while(typeLookup[0][nxt] >= FNUM) {
+        rValue = (rValue+nxt)*hashmult;
+        cur = (cur << 8) + nxt;
+        nxt = *src++;
+        if(typeLookup[0][nxt] < FNUM) break;
+        rValue = (rValue+nxt)*hashmult;
+        cur = (cur << 8) + nxt;
+        nxt = *src++;
+        if(typeLookup[0][nxt] < FNUM) break;
+        rValue = (rValue+nxt)*hashmult;
+        cur = (cur << 8) + nxt;
+        nxt = *src++;
+        if(typeLookup[0][nxt] < FNUM) break;
+        rValue = (rValue+nxt)*hashmult;
+        cur = (cur << 8) + nxt;
+        nxt = *src++;
+        if(typeLookup[0][nxt] < FNUM) break;
+        rValue = (rValue+nxt)*hashmult;
+        cur = (cur << 8) + nxt;
+        nxt = *src++;
+        if(typeLookup[0][nxt] < FNUM) break;
+        rValue = (rValue+nxt)*hashmult;
+        cur = (cur << 8) + nxt;
+        nxt = *src++;
+        if(typeLookup[0][nxt] < FNUM) break;
+        rValue = (rValue+nxt)*hashmult;
+        cur = (cur << 8) + nxt;
+        nxt = *src++;
+        if(typeLookup[0][nxt] < FNUM) break;
         rValue = (rValue+nxt)*hashmult;
         cur = (cur << 8) + nxt;
         nxt = *src++;
       }
+
         
       //those 5 bits can differentiate all keywords
       //not great but works...
@@ -177,7 +210,7 @@ static int32_t lex(char *src) {
         nxt = *src++;
       }
       rValue ^= 0x8000;
-      hash = hash*hashmult + (int)rValue*hashmult;
+      hash = (hash + (int)rValue)*hashmult;
     }
     else if(t >= 0b10101) { // lex(:)
 //        hash = (hash+':')*hashmult;
@@ -259,7 +292,7 @@ int main(int argc, char *argv[])
   inputSize = filestats.st_size;
 
   // allowed??                vv
-  input = mmap(NULL, inputSize+3, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+  input = mmap(NULL, inputSize+2, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE, fd, 0);
   input[inputSize] = '\n'; //simplifies search for end of comment
   input[inputSize+1] = 0;
   
