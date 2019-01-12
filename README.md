@@ -96,6 +96,17 @@ the number of branches by around 20M though the number of absolute misses stays 
 same.  
 ~ 0.94B cycles, 1.22B instructions, ~9.5% branch misses
 
+-- lexer27miu.c & lexer27miu_cmov.s --  
+Unrolled loop to compute KW/ID hash and seems this helped gcc optimze it somewhat more.  
+~ 0.94B cycles, 1.22B instructions  
+Assembler output with cmov patched in:  
+~ <0.91B cycles, 1.2B instructions  
+
+-- lexer27miu2.c --  
+Tried to improve without relying on assembler, use precompute values for keyword 
+* hashmult.  
+~ 0.915B cycles, 1.2B instructions  
+
 -- lexer2qdm.c & lexer2qd_fix.s --  
 Attempting jump table dispatch again with simplest mechanism, just look up location
 in table using current character and jump to handler. Could be viable since total
@@ -140,7 +151,7 @@ of cycles actually has not improved at all.
 ~ 1.78B cycles, 1.77B instructions ~9% branch misses
 Correction:  
 These measurements seem to be wrong somehow, now I get:  
-~ 1.55B cylces, 1.83B instructions  
+~ 1.55B cycles, 1.83B instructions  
 
 TODO: full (7-bit) table; return state offset directly since already 16-bit
 
