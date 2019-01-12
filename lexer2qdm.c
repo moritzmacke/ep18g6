@@ -3,9 +3,9 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <ctype.h>
-//#include <sys/mman.h>
-//#include <sys/stat.h>
-//#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define __STDC_LIMIT_MACROS 1
 
@@ -123,7 +123,6 @@ static int32_t lex(char *src) {
     &&altr, &&altr, &&kltr, &&altr, &&kltr, &&altr, &&kltr, &&kltr, 
     &&altr, &&altr, &&altr, &&fail, &&fail, &&fail, &&fail, &&fail };
     
-
 loop:
   goto *actionLookup[cur = *src++];
   
@@ -149,7 +148,7 @@ kltr:
   rValue = cur * hmult;
   uint64_t lastChars = cur;
   cur = *src;
-  while(letterLookup[cur] != 0) { //fast but L1 cache misses...
+  while(letterLookup[cur] != 0) {
     rValue = (rValue+cur)*hmult;
     lastChars = (lastChars << 8) | cur;
     cur = *++src;
@@ -171,7 +170,7 @@ kltr:
 altr:
   rValue = cur * hmult;
   cur = *src;
-  while(letterLookup[cur] != 0) { //fast but L1 cache misses...
+  while(letterLookup[cur] != 0) {
     rValue = (rValue+cur)*hmult;
     cur = *++src;
   }
@@ -224,7 +223,7 @@ cash: /* DOLLAR SIGN($) */
   else {
     goto actualFail;
   }
-
+  
 fail: /* INVALID CHARACTER */
   if(cur == 0) { //end of file
     printf("%llx\n", hash);
@@ -235,7 +234,7 @@ actualFail:
     fprintf(stderr, "Invalid character %c\n", cur);
     return 0;
   }
-
+  
     
 //      printf("%llx %s %c %c\n", hash, output, cur, nxt == '\n'? ' ' : nxt);
 
@@ -246,7 +245,7 @@ actualFail:
 
 int main(int argc, char *argv[])
 {
-/*
+
   int fd;
   struct stat filestats;
   size_t inputSize = 0;
@@ -279,8 +278,9 @@ int main(int argc, char *argv[])
     fprintf(stderr, "mmap failed.\n");
     exit(1);
   }
-  */
+  
 
+  /*
   size_t inputSize = 0;
   char *input = NULL;
 
@@ -313,6 +313,7 @@ int main(int argc, char *argv[])
 //  printf("%lu bytes read\n", read);
   
   lex(input);
+  */
   
   return 0;
 }
