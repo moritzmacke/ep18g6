@@ -136,8 +136,11 @@ to return to the start state and reparse the last character.
 Also I note that while I managed to improve the number of instructions, the number
 of cycles actually has not improved at all.  
 ~ 1.78B cycles, 1.77B instructions ~9% branch misses
+Correction:  
+These measurements seem to be wrong somehow, now I get:  
+~ 1.55B cylces, 1.83B instructions  
 
-
+TODO: full (7-bit) table; return state offset directly since already 16-bit
 
 
 ## -- Possible Improvements, Questions --
