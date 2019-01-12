@@ -16,9 +16,26 @@
 #define hashmult 0xbb433812a62b1dc1ULL //13493690561280548289ULL
 
 
-enum { RVAL_END=256, RVAL_ARRAY, RVAL_OF, RVAL_INT, RVAL_RETURN, 
-       RVAL_IF, RVAL_THEN, RVAL_ELSE, RVAL_WHILE, RVAL_DO, 
-       RVAL_VAR, RVAL_NOT, RVAL_OR, RVAL_ASSIGNOP };
+//enum { RVAL_END=256, RVAL_ARRAY, RVAL_OF, RVAL_INT, RVAL_RETURN, 
+//       RVAL_IF, RVAL_THEN, RVAL_ELSE, RVAL_WHILE, RVAL_DO, 
+//       RVAL_VAR, RVAL_NOT, RVAL_OR, RVAL_ASSIGNOP };
+
+
+//precomputed RVAL * hashmult
+#define R_END 0x433812a62b1dc100ULL
+#define R_ARRAY 0xfe7b4ab8d148dec1ULL
+#define R_OF 0xb9be82cb7773fc82ULL
+#define R_INT 0x7501bade1d9f1a43ULL
+#define R_RETURN 0x3044f2f0c3ca3804ULL
+#define R_IF 0xeb882b0369f555c5ULL
+#define R_THEN 0xa6cb631610207386ULL
+#define R_ELSE 0x620e9b28b64b9147ULL
+#define R_WHILE 0x1d51d33b5c76af08ULL
+#define R_DO 0xd8950b4e02a1ccc9ULL
+#define R_VAR 0x93d84360a8ccea8aULL
+#define R_NOT 0x4f1b7b734ef8084bULL
+#define R_OR 0xa5eb385f523260cULL
+#define R_ASSIGNOP 0xc5a1eb989b4e43cdULL
        
 enum { FANY = 0b00000, 
        FCSH = 0b00100, //CSH:HEX -> hex; CSH:* -> fail
@@ -59,23 +76,23 @@ static const uint8_t typeLookup[][128] = {
 	 
 struct kwStat {
   uint64_t keyword;
-  int value;
+  uint64_t value;
 };
   
 static const struct kwStat kwLookup[] = {
     {0, 0}, /* 0 */
     {0, 0},
-    {0x0000000000696e74, RVAL_INT},
+    {0x0000000000696e74, R_INT},
     {0, 0},
-    {0x000000000000646f, RVAL_DO},
+    {0x000000000000646f, R_DO},
     {0, 0},
     {0, 0},
-    {0x0000006172726179, RVAL_ARRAY},
+    {0x0000006172726179, R_ARRAY},
     
-    {0x000072657475726e, RVAL_RETURN}, /* 8 */
+    {0x000072657475726e, R_RETURN}, /* 8 */
     {0, 0},
     {0, 0},
-    {0x000000007468656e, RVAL_THEN},
+    {0x000000007468656e, R_THEN},
     {0, 0},
     {0, 0},
     {0, 0},
@@ -83,19 +100,19 @@ static const struct kwStat kwLookup[] = {
     
     {0, 0}, /* 16 */
     {0, 0},
-    {0x0000000000766172, RVAL_VAR},
-    {0x0000000000006966, RVAL_IF},
-    {0x00000000006e6f74, RVAL_NOT},
-    {0x0000000000006f66, RVAL_OF},
-    {0x0000007768696c65, RVAL_WHILE},
+    {0x0000000000766172, R_VAR},
+    {0x0000000000006966, R_IF},
+    {0x00000000006e6f74, R_NOT},
+    {0x0000000000006f66, R_OF},
+    {0x0000007768696c65, R_WHILE},
     {0, 0},
     
-    {0x0000000000006f72, RVAL_OR}, /* 24 */
+    {0x0000000000006f72, R_OR}, /* 24 */
     {0, 0},
-    {0x00000000656c7365, RVAL_ELSE},
+    {0x00000000656c7365, R_ELSE},
     {0, 0},
     {0, 0},
-    {0x0000000000656e64, RVAL_END},
+    {0x0000000000656e64, R_END},
     {0, 0},
     {0, 0},
     {0, 0},
@@ -135,8 +152,8 @@ static int32_t lex(char *src) {
     cur = nxt;
     nxt = *src++;
     uint8_t t = typeLookup[0][cur];
-   
-    rValue = cur * hashmult;  //pulling this out is mysteriously faster?
+    
+    rValue = cur * hashmult;  //
     
     if(t == FLEX) { 
       hash = hash*hashmult + rValue;
@@ -146,10 +163,10 @@ static int32_t lex(char *src) {
     
     if(t == FWSP) { continue; }
     
+    
     if(t >= FLTR) { 
 //      rValue = cur * hashmult;
 //      lastChars = cur;
-
       //no ident in llinput > length 7 so this does not actually loop...
       //gcc removes the src++, does use src[offset] and adjusts src at end
       //turn out faster somehow...
@@ -187,18 +204,21 @@ static int32_t lex(char *src) {
         nxt = *src++;
       }
 
-        
+      hash *= hashmult;
+      
       //those 5 bits can differentiate all keywords
       //not great but works...
       uint8_t l = (rValue >> 2) &0x1f;
       if(kwLookup[l].keyword == cur) {
-        rValue = kwLookup[l].value;
+        hash += kwLookup[l].value;
       }
-      hash = (hash + (int)rValue)*hashmult;
+      else {
+        hash += ((int)rValue)*hashmult;
+      }
+
 //      printf("%llx, KWID %c %c\n", hash, cur, esc(nxt));
       continue;
     }
-    
 
     t |= typeLookup[1][nxt];
       
@@ -219,7 +239,7 @@ static int32_t lex(char *src) {
     }
     else if(t == 0b10100) { //COL:EQU -> assign
       nxt = *src++;
-      hash = hash*hashmult + RVAL_ASSIGNOP*hashmult;
+      hash = hash*hashmult + R_ASSIGNOP;
 //        printf("%llx, ASSIGN %c %c\n", hash, cur, esc(nxt));
     }
     else {
@@ -233,19 +253,18 @@ static int32_t lex(char *src) {
           nxt = *src++;
         }
         rValue ^= 0x4000;
-        hash = hash*hashmult + (int)rValue*hashmult;
+        hash = (hash + (int)rValue)*hashmult;
 //        printf("%llx, HEXNUM %c %c\n", hash, cur, esc(nxt));
         break;
         
       case 0b10001: //MIN:MIN -> comment; 
         while((nxt = *src++) != '\n');
         continue;
-//        goto skipmult;
 
       case 0b10000: //MIN:*
       case 0b10010: //MIN:*
       case 0b10011: //MIN:*
-        hash = hash*hashmult + ('-' * hashmult);
+        hash = (hash + '-') * hashmult;
         break;
         
       default:
@@ -292,7 +311,7 @@ int main(int argc, char *argv[])
   inputSize = filestats.st_size;
 
   // allowed??                vv
-  input = mmap(NULL, inputSize+2, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+  input = mmap(NULL, inputSize+3, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE, fd, 0);
   input[inputSize] = '\n'; //simplifies search for end of comment
   input[inputSize+1] = 0;
   
