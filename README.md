@@ -155,6 +155,12 @@ These measurements seem to be wrong somehow, now I get:
 
 TODO: full (7-bit) table; return state offset directly since already 16-bit
 
+-- lexer35s.c --  
+This is a bit of a hybrid where I tried to handle lexemchars, whitespace and comments 
+purely using a simple DFA (just 6 states, duplicated for reasons that made more sense
+in an earlier version...) and break out for other cases.  
+~ 1.15B cycles, 1.19B instructions  
+
 
 ## -- Possible Improvements, Questions --
 
