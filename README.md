@@ -37,7 +37,7 @@ and nested switch statements.
 Keywords are not recognized by DFA as that really inflates the number of states.
 Instead treat them together with identifiers and test for each in a loop. 
 No real regard for speed here, just wanted something that works correctly. Turned
-out slower than the (full&fast) generated scanners.
+out slower than the (full&fast) generated scanners. 
 
 -- lexer2.c --  
 Forget about simulating a DFA, just distinguish 8 cases for each first char and then 
@@ -57,13 +57,13 @@ this case.
 ~ 1.35B cycles, 1.55B instructions
 
 -- lexer22m.c --  
-Tried dispatch with jump tables, also added zero guard to end of buffer
+Tried dispatch with jump tables, also added zero guard to end of buffer. 
 Rather large number of branch mis-predictions slow this one down.  
 ~ 1.4B cycles, 1.15B instructions
 
 -- lexer23m.c --  
-Builds in 2b, added guard at end of buffer to eliminate < comparison. 
-Pulled check for lexemchar of switch. Not sure of individual effects.  
+Builds on 2b, added a guard at end of buffer to eliminate < comparison. 
+Pulled check for lexemchar out of switch. Not sure of individual effects.  
 ~ 1.3B cycles, 1.35B instructions
 
 -- lexer24m.c --  
@@ -103,8 +103,8 @@ Assembler output with cmov patched in:
 ~ <0.91B cycles, 1.2B instructions  
 
 -- lexer27miu2.c --  
-Tried to improve without relying on assembler, use pre-compute values for keyword 
-times hashmult.  
+Tried to improve without relying on assembler, use pre-computed values for keyword 
+x hashmult.  
 ~ 0.915B cycles, 1.2B instructions  
 
 -- lexer2qdm.c & lexer2qdm_fix.s --  
@@ -117,7 +117,7 @@ Very low number of branches too, though relative misses very high. Basically bra
 prediction does not work at all for the table jumps so probably can expect 50% misses 
 for each processed token.  
 ~ 1.11B cycles, 0.85B instructions, 137M branches, >22% branch misses
-Assembler version is just fixed gcc output.  
+Assembler version is fixed gcc output + cmov.  
 ~ 1.06B cycles, 0.74B instruction, 120M branches, ~25% branch misses
 
 -- lexer3.c --  
