@@ -145,10 +145,10 @@ to lexem don't need to break out of loop.
 Still need to break out in other cases to get start of token for parsing numbers 
 and identifiers...  
 All of these lexers have the problem that after each recognized token we have 
-to return to the start state and reparse the last character.
-~~Also I note that while I managed to improve the number of instructions, the number
+to return to the start state and reparse the last character.  
+<del>Also I note that while I managed to improve the number of instructions, the number
 of cycles actually has not improved at all.  
-~ 1.78B cycles, 1.77B instructions ~9% branch misses~~
+~ 1.78B cycles, 1.77B instructions ~9% branch misses</del>  
 Correction:  
 These measurements seem to be wrong somehow, now I get:  
 ~ 1.55B cycles, 1.83B instructions  
