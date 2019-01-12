@@ -97,13 +97,13 @@ same.
 ~ 0.94B cycles, 1.22B instructions, ~9.5% branch misses
 
 -- lexer27miu.c & lexer27miu_cmov.s --  
-Unrolled loop to compute KW/ID hash and seems this helped gcc optimze it somewhat more.  
+Unrolled loop to compute KW/ID hash and seems this helped gcc optimize it somewhat more.  
 ~ 0.94B cycles, 1.22B instructions  
 Assembler output with cmov patched in:  
 ~ <0.91B cycles, 1.2B instructions  
 
 -- lexer27miu2.c --  
-Tried to improve without relying on assembler, use precompute values for keyword 
+Tried to improve without relying on assembler, use pre-compute values for keyword 
 * hashmult.  
 ~ 0.915B cycles, 1.2B instructions  
 
