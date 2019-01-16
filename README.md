@@ -66,6 +66,16 @@ Builds on 2b, added a guard at end of buffer to eliminate < comparison.
 Pulled check for lexemchar out of switch. Not sure of individual effects.  
 ~ 1.3B cycles, 1.35B instructions
 
+-- lexer23m2.c --  
+Pull check for keyword and identifier out of switch.  
+
+-- lexer23m3.c --  
+Table lookup instead of isalnum().  
+
+-- lexer23m4.c --  
+Lookahead, variable sizes and changes to switch. Actually faster than 24m? Can't get 
+reliable measurements right now.  
+
 -- lexer24m.c --  
 Slight changes to loop to read ahead a character, check for letter also put outside 
 of switch statement as very common case. Check for assign also slightly optimized. 
