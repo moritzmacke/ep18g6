@@ -15,12 +15,6 @@
 
 #define hashmult 0xbb433812a62b1dc1ULL //13493690561280548289ULL
 
-
-//enum { RVAL_END=256, RVAL_ARRAY, RVAL_OF, RVAL_INT, RVAL_RETURN, 
-//       RVAL_IF, RVAL_THEN, RVAL_ELSE, RVAL_WHILE, RVAL_DO, 
-//       RVAL_VAR, RVAL_NOT, RVAL_OR, RVAL_ASSIGNOP };
-
-
 //precomputed RVAL * hashmult
 #define R_END 0x433812a62b1dc100ULL
 #define R_ARRAY 0xfe7b4ab8d148dec1ULL
@@ -37,19 +31,45 @@
 #define R_OR 0xa5eb385f523260cULL
 #define R_ASSIGNOP 0xc5a1eb989b4e43cdULL
        
-enum { FANY = 0b00000, 
-       FCSH = 0b00100, //CSH:HEX -> hex; CSH:* -> fail
-       FWSP = 0b01000, //
-       FLEX = 0b01100, // 
-       FMIN = 0b10000, //MIN:MIN -> cmt; MIN:* -> lex('-')
-       FCOL = 0b10100, //COL:EQU -> ass; COL:* -> lex(':')
-       FNUM = 0b11000, //
-       FLTR = 0b11100 };
+enum {
+//combining
+  FMIN = 0b00000010, //MIN:MIN -> cmt; MIN:* -> lex('-')
+  FCOL = 0b00000100, //COL:EQU -> ass; COL:* -> lex(':')
+  FCSH = 0b00001000, //CSH:HEX -> hex; CSH:* -> fail
+  FANY = 0b00001110, 
+  
+  //dont matter much
+  FLEX = 0b11111100, 
+  FWSP = 0b11111101, 
+  FNUM = 0b11111110,
+  FLTR = 0b11111111
+  };
        
-enum { SANY = 0b10, 
-       SEQU = 0b00, //EQU:* -> fail
-       SMIN = 0b01, //MIN:MIN = 10001 -> cmt; MIN:* -> lex('-')
-       SHEX = 0b11 };
+enum { 
+  SHEX = 0b00000000,
+  SEQU = 0b00000010, 
+  SMIN = 0b00000101, 
+  SANY = 0b00000001 
+};
+
+
+#define T_ASS 0b0110
+#define T_CMT 0b0111
+#define T_HEX 0b1000
+
+/*
+   ^ |  SHEX |  SEQU |  SMIN |  SANY
+FMIN | *0010 | *0000 | ~0111 | *0011
+FCOL | *0100 | '0110 | *0001 | *0101
+FCSH | #1000 |  1010 |  1101 |  1001
+FANY |  1110 |  1100 |  1011 |  1111
+
+* LEXEM
+~ COMMENT
+' ASSIGN
+# HEXNUM
+
+*/
 		
 static const uint8_t typeLookup[][128] = { 
   {
@@ -120,12 +140,13 @@ static const struct kwStat kwLookup[] = {
 
 
 
-
+//__attribute__((noinline))
 static int isHexDigit(char c) {
   return ((unsigned) c -'0') < 10 || ((unsigned) (c | 32) - 'a') < 6;
 }
 
 //c must be [0-9A-Fa-f]
+//__attribute__((noinline))
 static uint8_t hexValue(char c) {
   uint8_t v = c - 0x30;
   if(v > 9) {
@@ -143,9 +164,14 @@ static int32_t lex(char *src) {
   
   uint64_t hash = 0;
   uint64_t rValue = 0;
-//  uint64_t tmp = 0;
-//  uint64_t lastChars = 0;
-		
+/*
+  static const void *actionLookup[] = {
+    &&lexc, &&lexc, &&lexc, &&lexc,     
+    &&lexc, &&lexc, &&assn, &&cmnt,     
+    &&hexn, &&fail, &&fail, &&fail, 
+    &&fail, &&fail, &&fail, &&fail };
+*/      
+
   nxt = *src++;
     
   while(1) { 
@@ -163,10 +189,10 @@ static int32_t lex(char *src) {
     
     if(t == FWSP) { continue; }
     
-    
-    if(t >= FLTR) { 
+    if(t == FLTR) { 
 //      rValue = cur * hashmult;
 //      lastChars = cur;
+
       //no ident in llinput > length 7 so this does not actually loop...
       //gcc removes the src++, does use src[offset] and adjusts src at end
       //turn out faster somehow...
@@ -219,10 +245,14 @@ static int32_t lex(char *src) {
 //      printf("%llx, KWID %c %c\n", hash, cur, esc(nxt));
       continue;
     }
-
-    t |= typeLookup[1][nxt];
-      
-    if(t >= 0b11000) { //NUM:* -> decimal
+   
+    t ^= typeLookup[1][nxt];
+    
+    // the way cases are distinguished should be better than in version 27
+    // somehow the generated code is still slower though, especially with
+    // switch. *shrugs* looks cleaner though
+   
+    if(t > 0b1111) { //DECIMAL
       rValue = cur - 0x30;
       uint8_t v;
       while((v = nxt - 0x30) < 10) {
@@ -231,64 +261,88 @@ static int32_t lex(char *src) {
       }
       rValue ^= 0x8000;
       hash = (hash + (int)rValue)*hashmult;
+//      printf("%llx, DECIMAL %c %c\n", hash, cur, esc(nxt));
     }
-    else if(t >= 0b10101) { // lex(:)
-//        hash = (hash+':')*hashmult;
+    else if(t < T_ASS) { // LEXEM ':' or '-'
       hash = hash*hashmult + rValue;
-//        printf("%llx, LEXEM %c %c\n", hash, cur, esc(nxt));
+//      printf("%llx, LEXEM2 %c %c\n", hash, cur, esc(nxt));
     }
-    else if(t == 0b10100) { //COL:EQU -> assign
+    else if(t == T_ASS) { // := ASSIGN
       nxt = *src++;
       hash = hash*hashmult + R_ASSIGNOP;
-//        printf("%llx, ASSIGN %c %c\n", hash, cur, esc(nxt));
+//      printf("%llx, ASSIGN %c %c\n", hash, cur, esc(nxt));
+    }
+    else if(t == T_CMT) { // COMMENT
+      while((nxt = *src++) != '\n');
+    }
+    else if(t == T_HEX) {
+      rValue = hexValue(nxt);
+      nxt = *src++;
+      while(isHexDigit(nxt)) {
+        rValue = (rValue*16) + hexValue(nxt);
+        nxt = *src++;
+      }
+      rValue ^= 0x4000;
+      hash = hash*hashmult + (int)rValue*hashmult;
     }
     else {
-      switch(t) {
-        
-      case 0b00111: //CSH:HEX = 00111 -> hexnum
-        rValue = hexValue(nxt);
-        nxt = *src++;
-        while(isHexDigit(nxt)) {
-          rValue = (rValue*16) + hexValue(nxt);
-          nxt = *src++;
-        }
-        rValue ^= 0x4000;
-        hash = (hash + (int)rValue)*hashmult;
-//        printf("%llx, HEXNUM %c %c\n", hash, cur, esc(nxt));
-        break;
-        
-      case 0b10001: //MIN:MIN -> comment; 
-        while((nxt = *src++) != '\n');
-        continue;
-
-      case 0b10000: //MIN:*
-      case 0b10010: //MIN:*
-      case 0b10011: //MIN:*
-        hash = (hash + '-') * hashmult;
-        break;
-        
-      default:
-        if(cur == 0) { //end of file
-          printf("%lx\n", hash);
-          return 1;
-        }
-        else {
-          fprintf(stderr, "Invalid character %c\n", cur);
-          return 0;
-        }
+      if(cur == 0) { //end of file
+        printf("%lx\n", hash);
+        return 1;
       }
-    }     
-    
+      else {
+        fprintf(stderr, "Invalid character %c\n", cur);
+        return 0;
+      }
+    }
 
-//      printf("%llx %s %c %c\n", hash, output, cur, nxt == '\n'? ' ' : nxt);
+    /*
+    else {
+      
+      goto *actionLookup[t];
 
+      
+lexc: // LEXEM ':' or '-'
+      hash = hash*hashmult + rValue;
+      continue;
+      
+cmnt: // COMMENT
+      while((nxt = *src++) != '\n');
+      continue;
+      
+assn: // ASSIGN
+      nxt = *src++;
+      hash = hash*hashmult + R_ASSIGNOP;
+      continue;
+        
+hexn: 
+      rValue = hexValue(nxt);
+      nxt = *src++;
+      while(isHexDigit(nxt)) {
+        rValue = (rValue*16) + hexValue(nxt);
+        nxt = *src++;
+      }
+      rValue ^= 0x4000;
+      hash = hash*hashmult + (int)rValue*hashmult;
+      continue;
+      
+fail:
+      if(cur == 0) { //end of file
+        printf("%lx\n", hash);
+        return 1;
+      }
+      else {
+        fprintf(stderr, "Invalid character %c\n", cur);
+        return 0;
+      }
+    }
+    */
 	}
 
 }
 
 int main(int argc, char *argv[])
 {
-
 
   int fd;
   struct stat filestats;
@@ -311,7 +365,7 @@ int main(int argc, char *argv[])
   inputSize = filestats.st_size;
 
   // allowed??                vv
-  input = mmap(NULL, inputSize+3, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+  input = mmap(NULL, inputSize+2, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE, fd, 0);
   input[inputSize] = '\n'; //simplifies search for end of comment
   input[inputSize+1] = 0;
   
@@ -322,40 +376,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "mmap failed.\n");
     exit(1);
   }
- 
-  
-/*
-  size_t inputSize = 0;
-  char *input = NULL;
-
-  if (argc != 2) {
-    fprintf(stderr,"Usage: %s <file>\n",argv[0]);
-    exit(1);
-  }
-  
-  FILE *in = fopen(argv[1],"rb");
-  if (in == NULL) {
-    fprintf(stderr, "Cannot open %s\n", argv[1]);
-    exit(1);
-  }
-  
-  fseek(in, 0, SEEK_END);
-  inputSize = ftello(in);
-  fseek(in, 0, SEEK_SET);
-  
-//  inputSize = 10000;
-  
-  input = malloc(inputSize+2);
-  
-  size_t read = fread(input, 1, inputSize, in);
-  
-  input[inputSize] = input[inputSize + 1] = 0;
-  
-  fclose(in);
-  
-  lex(input);
-  
-  */
-  
+   
   return 0;
 }

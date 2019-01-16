@@ -105,7 +105,14 @@ Assembler output with cmov patched in:
 -- lexer27miu2.c --  
 Tried to improve without relying on assembler, use pre-computed values for keyword 
 x hashmult.  
-~ 0.915B cycles, 1.2B instructions  
+~ 0.915B cycles, 1.2B instructions, 21.1M branch misses (8.6%) 
+
+-- lexer28m.c --  
+Final attempt at improving handling for less common cases, cleaner and more compact, 
+but is a bit slower for unknown reasons. Probably the slightly larger amount of branch 
+misses. Not sure where they come from though, even keeping everything the same from 27m
+version and just changing to the XOR method makes gcc generate slightly worse code.  
+~ 0.922B cycles, 1.2B instructions, 21.4M branch misses (8.8%) 
 
 -- lexer2qdm.c & lexer2qdm_fix.s --  
 Attempting jump table dispatch again with simplest mechanism, just look up location
