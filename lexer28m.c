@@ -15,6 +15,10 @@
 
 #define hashmult 0xbb433812a62b1dc1ULL //13493690561280548289ULL
 
+enum { RVAL_END=256, RVAL_ARRAY, RVAL_OF, RVAL_INT, RVAL_RETURN, 
+       RVAL_IF, RVAL_THEN, RVAL_ELSE, RVAL_WHILE, RVAL_DO, 
+       RVAL_VAR, RVAL_NOT, RVAL_OR, RVAL_ASSIGNOP };
+
 //precomputed RVAL * hashmult
 #define R_END 0x433812a62b1dc100ULL
 #define R_ARRAY 0xfe7b4ab8d148dec1ULL
@@ -181,13 +185,13 @@ static int32_t lex(char *src) {
     
     rValue = cur * hashmult;  //
     
+    if(t == FWSP) { continue; }
+    
     if(t == FLEX) { 
       hash = hash*hashmult + rValue;
 //      printf("%llx, LEXEM %c %c\n", hash, cur, esc(nxt));
       continue;
     }
-    
-    if(t == FWSP) { continue; }
     
     if(t == FLTR) { 
 //      rValue = cur * hashmult;
@@ -269,7 +273,7 @@ static int32_t lex(char *src) {
     }
     else if(t == T_ASS) { // := ASSIGN
       nxt = *src++;
-      hash = hash*hashmult + R_ASSIGNOP;
+      hash = (hash+RVAL_ASSIGNOP)*hashmult;
 //      printf("%llx, ASSIGN %c %c\n", hash, cur, esc(nxt));
     }
     else if(t == T_CMT) { // COMMENT
@@ -283,7 +287,7 @@ static int32_t lex(char *src) {
         nxt = *src++;
       }
       rValue ^= 0x4000;
-      hash = hash*hashmult + (int)rValue*hashmult;
+      hash = (hash + (int)rValue)*hashmult;
     }
     else {
       if(cur == 0) { //end of file
@@ -344,6 +348,7 @@ fail:
 int main(int argc, char *argv[])
 {
 
+
   int fd;
   struct stat filestats;
   size_t inputSize = 0;
@@ -376,6 +381,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "mmap failed.\n");
     exit(1);
   }
-   
+
   return 0;
 }
